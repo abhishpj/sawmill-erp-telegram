@@ -1,21 +1,36 @@
-import requests
+import asyncio
+import httpx
+import logging
 from ..config import settings
 
+log = logging.getLogger("sawmill.telegram")
 API = f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}"
 
-def tg_send(chat_id: int, text: str):
-    payload = {"chat_id": chat_id, "text": text[:4096], "disable_web_page_preview": True}
-    r = requests.post(f"{API}/sendMessage", json=payload, timeout=15)
-    if r.status_code >= 300:
-        print("Telegram send error:", r.status_code, r.text)
 
-def set_webhook():
-    if not (settings.TELEGRAM_BOT_TOKEN and settings.PUBLIC_BASE_URL):
-        print("[WARN] BOT_TOKEN or PUBLIC_BASE_URL missing; webhook not set.")
+async def tg_send(chat_id: int, text: str):
+    """Async sendMessage wrapper. Non-blocking."""
+    if not settings.TELEGRAM_BOT_TOKEN:
+        log.warning("TELEGRAM_BOT_TOKEN not configured; skipping send")
         return
-    url = f"{settings.PUBLIC_BASE_URL}/tg/webhook"
-    resp = requests.post(f"{API}/setWebhook",
-                         json={"url": url,
-                               "secret_token": settings.TELEGRAM_WEBHOOK_SECRET},
-                         timeout=15)
-    print("SetWebhook:", resp.status_code, resp.text)
+
+    payload = {"chat_id": chat_id, "text": text[:4096], "disable_web_page_preview": True}
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            r = await client.post(f"{API}/sendMessage", json=payload)
+            if r.status_code >= 300:
+                log.error("Telegram send error %s %s", r.status_code, r.text)
+    except Exception as e:
+        log.exception("tg_send exception: %s", e)
+
+
+# convenience sync wrapper if some callers are sync - uses asyncio.run_coroutine_threadsafe when loop running
+def tg_send_sync(chat_id: int, text: str):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        # no loop running; run directly
+        asyncio.run(tg_send(chat_id, text))
+        return
+
+    # schedule in background
+    asyncio.ensure_future(tg_send(chat_id, text))
