@@ -1,21 +1,26 @@
-import os
-from pydantic import BaseModel
+from pydantic import BaseSettings, Field
 
-class Settings(BaseModel):
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "dev")
-    TIMEZONE: str = os.getenv("TIMEZONE", "Asia/Kolkata")
-    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "info")
 
-    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    TELEGRAM_WEBHOOK_SECRET: str = os.getenv("TELEGRAM_WEBHOOK_SECRET", "change-me")
-    PUBLIC_BASE_URL: str = os.getenv("PUBLIC_BASE_URL", "")
+class Settings(BaseSettings):
+    ENVIRONMENT: str = Field("prod", env="ENVIRONMENT")
+    TIMEZONE: str = Field("Asia/Kolkata", env="TIMEZONE")
+    LOG_LEVEL: str = Field("INFO", env="LOG_LEVEL")
 
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    TELEGRAM_BOT_TOKEN: str = Field("", env="TELEGRAM_BOT_TOKEN")
+    TELEGRAM_WEBHOOK_SECRET: str = Field("", env="TELEGRAM_WEBHOOK_SECRET")
+    PUBLIC_BASE_URL: str = Field("", env="PUBLIC_BASE_URL")
 
-    DATABASE_URL: str | None = os.getenv("DATABASE_URL") or None
-    DB_PATH: str = os.getenv("DB_PATH", "sawmill_mvp.db")
+    OPENAI_API_KEY: str = Field("", env="OPENAI_API_KEY")
 
-    RATE_LIMIT_PER_MINUTE: int = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
-    ALLOWED_ORIGINS: str = os.getenv("ALLOWED_ORIGINS", "*")
+    DATABASE_URL: str | None = Field(None, env="DATABASE_URL")
+    DB_PATH: str = Field("sawmill_mvp.db", env="DB_PATH")
+
+    RATE_LIMIT_PER_MINUTE: int = Field(60, env="RATE_LIMIT_PER_MINUTE")
+    ALLOWED_ORIGINS: str = Field("*", env="ALLOWED_ORIGINS")
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
 
 settings = Settings()
