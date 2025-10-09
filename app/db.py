@@ -100,14 +100,24 @@ def upsert_customer(name: str) -> int:
         return cid
 
 
+import logging
+from datetime import datetime
+log = logging.getLogger("sawmill.db")
+
 def insert_stockin(p: dict) -> int:
     sid = upsert_supplier(p.get("supplier_name", "Unknown"))
+    date_str = p.get("date_str") or datetime.utcnow().isoformat(sep=" ", timespec="seconds")
+    qty = p.get("qty_logs") or p.get("qty") or 0
+    vol = p.get("volume_cft")
     with db_conn() as conn:
         c = conn.cursor()
-        c.execute("""INSERT INTO stock_in(supplier_id,qty_logs,volume_cft,date)
-                     VALUES(?,?,?,?)""",
-                  (sid, p.get("qty_logs"), p.get("volume_cft"), p.get("date_str")))
-        return c.lastrowid
+        c.execute(
+            "INSERT INTO stock_in(supplier_id,qty_logs,volume_cft,date) VALUES(?,?,?,?)",
+            (sid, qty, vol, date_str),
+        )
+        batch_id = c.lastrowid
+        log.info("Inserted stock_in batch_id=%s supplier_id=%s qty=%s vol=%s date=%s", batch_id, sid, qty, vol, date_str)
+        return batch_id
 
 
 def insert_production(p: dict) -> int:
