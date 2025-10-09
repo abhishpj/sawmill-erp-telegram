@@ -6,7 +6,7 @@ from .config import settings
 from .db import init_db
 from .services.telegram import tg_send_sync, API as TG_API, tg_send
 from .routers.telegram import router as telegram_router
-from .routers import debug_db as debug_router
+from .routers import db_debug as debug_router
 app.include_router(debug_router.router)
 
 # basic logging configuration
