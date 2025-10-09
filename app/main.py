@@ -1,13 +1,11 @@
+# app/main.py
 import logging
 import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 from .config import settings
 from .db import init_db
-from .services.telegram import tg_send_sync, API as TG_API, tg_send
-from .routers.telegram import router as telegram_router
-from .routers import db_debug as debug_router
-app.include_router(debug_router.router)
 
 # basic logging configuration
 log = logging.getLogger("sawmill")
@@ -18,8 +16,8 @@ handler.setFormatter(formatter)
 log.addHandler(handler)
 log.setLevel(level)
 
+# create FastAPI app instance first
 app = FastAPI(title="Sawmill Telegram ERP (Prod)")
-
 
 app.add_middleware(
     CORSMiddleware,
@@ -29,24 +27,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# import routers AFTER app is created to avoid circular import issues
+from .routers.telegram import router as telegram_router
+
+# optional debug router; import only if file exists
+try:
+    from .routers.debug_db import router as debug_router
+except Exception:
+    debug_router = None
+
+# include routers
+app.include_router(telegram_router)
+if debug_router is not None:
+    app.include_router(debug_router)
 
 @app.on_event("startup")
 def bootstrap():
     init_db()
     log.info("Bootstrap complete. environment=%s", settings.ENVIRONMENT)
-    # do not block startup; try to register webhook but ignore failures
+    # try to auto-register webhook (best-effort)
     try:
-        # deferred import to avoid circular import at startup if needed
         from .services.telegram import set_webhook
-
         set_webhook()
     except Exception as e:
         log.exception("Could not auto-register webhook on startup: %s", e)
 
-
 @app.get("/")
 def health():
     return {"ok": True, "service": "Sawmill Telegram ERP", "env": settings.ENVIRONMENT}
-
-
-app.include_router(telegram_router)
