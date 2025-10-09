@@ -35,6 +35,8 @@ try:
     from .routers.db_debug import router as debug_router
 except Exception:
     debug_router = None
+from .routers.debug_token import router as debug_token_router
+app.include_router(debug_token_router)
 
 # include routers
 app.include_router(telegram_router)
