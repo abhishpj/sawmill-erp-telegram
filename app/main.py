@@ -32,7 +32,7 @@ from .routers.telegram import router as telegram_router
 
 # optional debug router; import only if file exists
 try:
-    from .routers.debug_db import router as debug_router
+    from .routers.db_debug import router as debug_router
 except Exception:
     debug_router = None
 
